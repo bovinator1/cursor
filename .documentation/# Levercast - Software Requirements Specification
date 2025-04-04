@@ -1,0 +1,81 @@
+# Levercast - Software Requirements Specification (SRS)
+
+## System Design
+
+Levercast is a web-based application that enables entrepreneurs to efficiently capture and share thoughts across LinkedIn and Twitter. It processes user input via AI-powered templates and allows seamless editing and publishing.
+
+## Architecture Pattern
+
+- **Client-Server Architecture**
+- **Microservices-based Backend**
+- **Event-Driven Processing for AI-powered Formatting**
+
+## State Management
+
+- **Frontend:** React Context API + Zustand for lightweight global state management
+- **Backend:** Stateless RESTful API with session-based authentication
+- **Database Caching:** Redis for storing drafts and temporary processing data
+
+## Data Flow
+
+1. **User Input** (Text/Voice) → Sent to AI Processing Engine
+2. **AI Processes Input** → Generates platform-specific content
+3. **User Edits & Reviews** → Modifies AI-generated content
+4. **User Publishes** → Content is posted to LinkedIn/Twitter
+5. **Drafts & History Stored** → PostgreSQL for persistence, Redis for caching
+
+## Technical Stack
+
+- **Frontend:** Next.js (React), Tailwind CSS
+- **Backend:** Node.js (Express)
+- **Database:** PostgreSQL + Prisma ORM
+- **Authentication:** OAuth 2.0 (LinkedIn & Twitter)
+- **AI Processing:** OpenAI API / Custom NLP Models
+- **Cloud Storage:** AWS S3 for media storage
+- **Hosting & Deployment:** Vercel (Frontend), AWS Lambda (Backend)
+
+## Authentication Process
+
+- OAuth 2.0 authentication via LinkedIn & Twitter
+- JWT tokens for session management
+- Secure storage of user tokens with encryption
+
+## Route Design
+
+### Public Routes
+
+- `/login` → OAuth Authentication
+- `/register` → User registration (if needed)
+- `/` → Landing page
+
+### Protected Routes
+
+- `/dashboard` → User's content overview
+- `/new-post` → Idea capture & AI processing
+- `/edit/:postId` → Post editing interface
+- `/settings` → User preferences and theme selection
+- `/drafts` → Saved drafts management
+
+## API Design
+
+### Endpoints
+
+- `POST /api/auth/login` → OAuth login
+- `GET /api/posts` → Fetch user posts
+- `POST /api/posts` → Create new post
+- `PUT /api/posts/:id` → Update existing post
+- `DELETE /api/posts/:id` → Delete a post
+- `POST /api/ai/process` → Process raw input via AI templates
+- `GET /api/user/settings` → Fetch user preferences
+
+## Database Design ERD
+
+**Tables:**
+
+- `Users`: (id, email, name, auth_provider, created_at)
+- `Posts`: (id, user_id, content, status, created_at, updated_at)
+- `Drafts`: (id, user_id, content, created_at)
+- `Settings`: (id, user_id, theme, notifications)
+- `AI_Processing_History`: (id, user_id, input_text, processed_text, timestamp)
+
+This document provides the foundation for development, ensuring clarity in system architecture, data flow, and technical implementation.

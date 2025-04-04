@@ -1,0 +1,53 @@
+# Levercast - Product Requirements Document
+
+## 1. Elevator Pitch
+
+Levercast is a web-based application designed for busy entrepreneurs who want to efficiently capture and share their thoughts across multiple social media platforms. Users can input ideas via text or voice, and the app transforms them into formatted social media posts using predefined AI templates. Levercast generates platform-optimized versions for LinkedIn and Twitter, allowing users to preview, edit, and publish posts seamlessly. By streamlining content creation, Levercast saves time while maximizing marketing impact.
+
+## 2. Who is this app for?
+
+- Entrepreneurs and business professionals who want to share insights and thought leadership on social media.
+- Solopreneurs managing their personal brand without a dedicated social media team.
+- Content creators who need a fast and structured way to refine and distribute their ideas.
+
+## 3. Functional Requirements
+
+- **Idea Capture**: Users can input thoughts via text or voice.
+- **AI-Powered Formatting**: The app processes raw input into well-structured posts using predefined templates.
+- **Multi-Platform Content Generation**: Generates platform-optimized versions for LinkedIn and Twitter.
+- **Preview & Editing**: Users can review posts in a styled preview matching each platform’s format and make edits before publishing.
+- **OAuth Authentication**: Users can securely connect their LinkedIn and Twitter accounts.
+- **Direct Publishing**: Posts can be published immediately from the app.
+- **Draft Management**: Users can save drafts and revisit them before publishing.
+- **Tone Customization**: Users can adjust the AI-generated content's tone (e.g., professional, casual, witty).
+
+## 4. User Stories
+
+### As an entrepreneur:
+
+- I want to quickly jot down an idea via text or voice so I don’t lose it.
+- I want the app to refine my idea into a structured post without requiring manual effort.
+- I want to preview my post exactly as it will appear on LinkedIn and Twitter.
+- I want to edit the AI-generated post to ensure it aligns with my personal style.
+- I want to publish my post directly to my LinkedIn and Twitter accounts.
+- I want to save drafts and return to them later before publishing.
+- I want to adjust the tone of my AI-generated posts to match different audiences.
+
+## 5. User Interface
+
+- **Dashboard**: A clean, minimalistic interface showing recent drafts and published posts.
+- **Input Box**: A simple, distraction-free input area supporting text and voice entry.
+- **Post Preview**: Real-time rendering of AI-generated posts styled to match LinkedIn and Twitter.
+- **Editing Panel**: Inline editing tools for refining AI-generated content.
+- **Publish Button**: One-click publishing after review.
+- **Drafts Section**: Saved drafts organized for easy access and future editing.
+- being able to change the colour schemes to different themes.
+
+## 6. Future Considerations
+
+- Expanding to more platforms (e.g., Facebook, Instagram, Threads).
+- AI-powered image optimization for different social media formats.
+- Team collaboration features for social media managers and executives.
+- Scheduling functionality for timed publishing.
+
+Levercast will serve as an essential tool for entrepreneurs looking to maintain an active online presence with minimal effort. 🚀

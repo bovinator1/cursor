@@ -1,0 +1,57 @@
+# Levercast - User Interface Description Document
+
+## Layout Structure
+
+Levercast follows a **tab-based interface** that guides users through structured workflows:
+
+1. **Idea Capture** - Users input their thoughts via text or voice.
+2. **AI Processing** - The app formats input into structured social media posts using predefined templates.
+3. **Final Edit** - Users refine AI-generated content with advanced editing tools.
+4. **Publish** - Users review the final post and publish directly to LinkedIn or Twitter.
+
+## Core Components
+
+- **Text & Voice Input Box**: Supports raw idea entry with a simple, distraction-free UI.
+- **Processing Tab**: Displays AI-generated content for review.
+- **Editing Panel**: Offers advanced controls including rewrite suggestions, tone sliders, and keyword emphasis.
+- **Multi-Tab Preview**: Allows users to view posts in LinkedIn and Twitter-specific formats.
+- **Theme Customization**: Users can switch color schemes for personalization.
+- **Publish & Save Draft Buttons**: Easily accessible actions for workflow efficiency.
+
+## Interaction Patterns
+
+- **Manual Step-by-Step Workflow**: Users navigate between tabs for structured content creation.
+- **Inline Accept/Reject AI Suggestions**: Users can refine AI-generated content dynamically.
+- **Drag-and-Drop Keyword Emphasis**: Enables easy prioritization of key terms.
+- **Real-Time Multi-Platform Preview**: Ensures post appearance accuracy before publishing.
+
+## Visual Design Elements & Color Scheme
+
+- **Minimalist, clean UI** with a focus on clarity and usability.
+- **Color Themes**: Light and dark mode, plus customizable accent colors.
+- **Consistent Iconography**: Simple, recognizable icons for actions like edit, publish, and save.
+- **Card-Based Layouts**: Posts and previews appear in neatly arranged cards for readability.
+
+## Mobile, Web App, Desktop Considerations
+
+- **Adaptive Design**: The UI adjusts dynamically for different screen sizes.
+- **Mobile Gesture Support**: Swiping for navigation, tapping for quick actions.
+- **Cloud-Synced Drafts**: Users can switch between devices without losing progress.
+- **Keyboard Shortcuts for Desktop**: Enhances efficiency for power users.
+
+## Typography
+
+- **Primary Font**: A modern, sans-serif typeface for readability.
+- **Hierarchy**:
+    - Headings: Bold, larger sizes for section clarity.
+    - Body Text: Medium-weight, optimized for screen reading.
+    - Buttons & Labels: Clearly distinguishable with strong contrast.
+
+## Accessibility
+
+- **High-Contrast Mode**: Ensures visibility for users with vision impairments.
+- **Keyboard Navigation**: Full support for users who rely on keyboard shortcuts.
+- **Voice-to-Text Optimization**: Enhanced recognition for accurate input.
+- **ARIA Labels & Screen Reader Support**: Ensures accessibility compliance.
+
+This UI design ensures that entrepreneurs and content creators can efficiently refine, preview, and publish their AI-generated social media posts with a structured yet flexible workflow.
