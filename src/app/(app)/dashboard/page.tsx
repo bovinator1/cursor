@@ -1,23 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { Pen, FileText, ArrowUpRight } from "lucide-react";
+import { Pen, FileText, ArrowUpRight, LineChart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { mockPosts, Post } from "@/mocks/posts";
 import { currentUser } from "@/mocks/users";
+import PostAnalytics from "@/components/PostAnalytics";
 
 export default function DashboardPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [drafts, setDrafts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   // Simulate fetching data
   useEffect(() => {
     // In a real app, this would be an API call
     setTimeout(() => {
       const allPosts = mockPosts;
-      setPosts(allPosts.filter(post => post.status === "published"));
+      const publishedPosts = allPosts.filter(post => post.status === "published");
+      setPosts(publishedPosts);
       setDrafts(allPosts.filter(post => post.status === "draft"));
+      
+      // Select the first published post for analytics if available
+      if (publishedPosts.length > 0) {
+        setSelectedPost(publishedPosts[0]);
+      }
+      
       setIsLoading(false);
     }, 500);
   }, []);
@@ -74,6 +83,38 @@ export default function DashboardPage() {
           </div>
         </Link>
       </div>
+
+      {/* Analytics section - only show if user has published posts */}
+      {posts.length > 0 && (
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">Content Performance</h2>
+            <div className="flex items-center space-x-2">
+              <select 
+                className="text-sm border border-neutral-300 dark:border-neutral-700 rounded-md px-3 py-1.5 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100"
+                value={selectedPost?.id || ""}
+                onChange={(e) => {
+                  const post = posts.find(p => p.id === e.target.value);
+                  if (post) setSelectedPost(post);
+                }}
+              >
+                {posts.map(post => (
+                  <option key={post.id} value={post.id}>
+                    {post.rawContent.substring(0, 30)}{post.rawContent.length > 30 ? '...' : ''}
+                  </option>
+                ))}
+              </select>
+              
+              <div className="text-xs text-neutral-500 dark:text-neutral-400 flex items-center">
+                <LineChart className="h-3 w-3 mr-1" />
+                Analytics
+              </div>
+            </div>
+          </div>
+          
+          {selectedPost && <PostAnalytics post={selectedPost} />}
+        </div>
+      )}
 
       {/* Recent activity */}
       <div className="mb-8">

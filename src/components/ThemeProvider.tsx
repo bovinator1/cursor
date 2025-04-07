@@ -20,6 +20,12 @@ type ThemeContextType = {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+// Helper for SSR
+const getSystemTheme = (): "dark" | "light" => {
+  if (typeof window === "undefined") return "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+};
+
 export function ThemeProvider({
   children,
   defaultTheme = "system",
@@ -27,8 +33,36 @@ export function ThemeProvider({
   enableSystem = true,
   disableTransitionOnChange = false,
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(defaultTheme);
+  // Try to get the theme from localStorage, fallback to defaultTheme
+  const [theme, setThemeState] = useState<Theme>(() => {
+    // We need to check if we're in the browser to avoid errors during SSR
+    if (typeof window !== "undefined") {
+      try {
+        const storedTheme = localStorage.getItem("theme") as Theme | null;
+        return storedTheme || defaultTheme;
+      } catch (error) {
+        console.error("Error accessing localStorage:", error);
+        return defaultTheme;
+      }
+    }
+    return defaultTheme;
+  });
 
+  // Function to set the theme in state and localStorage
+  const setTheme = React.useCallback((newTheme: Theme) => {
+    setThemeState(newTheme);
+    
+    // Save to localStorage
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("theme", newTheme);
+      } catch (error) {
+        console.error("Error writing to localStorage:", error);
+      }
+    }
+  }, []);
+
+  // Apply theme to document
   useEffect(() => {
     const root = window.document.documentElement;
 
@@ -39,38 +73,74 @@ export function ThemeProvider({
       }, 0);
     }
 
-    if (attribute === "class") {
-      root.classList.remove("light", "dark");
-      if (theme !== "system") {
-        root.classList.add(theme);
-      }
+    // Remove previous theme classes
+    root.classList.remove("light", "dark");
+
+    // Apply new theme
+    if (theme === "system" && enableSystem) {
+      const systemTheme = getSystemTheme();
+      root.classList.add(systemTheme);
     } else {
-      if (theme === "system") {
-        root.removeAttribute(attribute);
+      root.classList.add(theme);
+    }
+
+    // Set attribute as well (for components that may use this)
+    if (attribute === "class") {
+      // Already handled above
+    } else {
+      if (theme === "system" && enableSystem) {
+        const systemTheme = getSystemTheme();
+        root.setAttribute(attribute, systemTheme);
       } else {
         root.setAttribute(attribute, theme);
       }
     }
-
-    if (theme === "system" && enableSystem) {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
-
-      if (attribute === "class") {
-        root.classList.add(systemTheme);
-      } else {
-        root.setAttribute(attribute, systemTheme);
-      }
-    }
   }, [theme, attribute, disableTransitionOnChange, enableSystem]);
+
+  // Listen for system theme changes
+  useEffect(() => {
+    if (!enableSystem) return;
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    
+    // Initial check
+    if (theme === "system") {
+      // We don't need to update any state as the effect above will handle the DOM updates
+    }
+
+    // Listen for changes
+    const listener = (event: MediaQueryListEvent) => {
+      if (theme === "system") {
+        // Force re-render to update the theme
+        setThemeState("system");
+      }
+    };
+
+    // Add listener
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", listener);
+    } else {
+      // Fallback for older browsers
+      mediaQuery.addListener(listener);
+    }
+
+    // Clean up
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener("change", listener);
+      } else {
+        // Fallback for older browsers
+        mediaQuery.removeListener(listener);
+      }
+    };
+  }, [theme, enableSystem]);
 
   const value = React.useMemo(
     () => ({
       theme,
       setTheme,
     }),
-    [theme]
+    [theme, setTheme]
   );
 
   return (

@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Save, Send, RefreshCw } from "lucide-react";
 import useStore from "@/store/useStore";
+import { useToast } from "@/components/ui/toast";
 
 export default function EditPostPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { id } = params;
+  const { addToast } = useToast();
   
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"linkedin" | "twitter">("linkedin");
@@ -66,8 +68,12 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
       processedContent: editedContent,
     });
     
-    // Show success message in a real app
-    alert("Draft saved successfully!");
+    // Show success toast
+    addToast({
+      title: "Draft saved",
+      description: "Your changes have been saved successfully.",
+      type: "success",
+    });
   };
 
   const handlePublish = () => {
@@ -82,26 +88,54 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
     }
     
     if (platforms.length === 0) {
-      alert("Please create content for at least one platform before publishing.");
+      // Show error toast
+      addToast({
+        title: "Cannot publish",
+        description: "Please create content for at least one platform before publishing.",
+        type: "error",
+      });
       return;
     }
     
     publishPost(id, platforms);
     
-    // Show success message in a real app
-    alert("Post published successfully!");
+    // Show success toast
+    addToast({
+      title: "Post published",
+      description: `Your post has been published to ${platforms.join(" and ")}.`,
+      type: "success",
+    });
+    
+    // Redirect to dashboard
     router.push("/dashboard");
   };
 
   const handleRegenerateContent = (platform: "linkedin" | "twitter") => {
+    // Show info toast
+    addToast({
+      title: "Regenerating content",
+      description: `Recreating your ${platform === "linkedin" ? "LinkedIn" : "Twitter"} post with AI.`,
+      type: "info",
+    });
+    
     // For the prototype, we'll use the default "professional" tone
     processPostWithAI(id, platform, "professional");
     
-    // In a real app, we'd show a loading indicator
+    // Wait for a short delay to simulate processing
     setTimeout(() => {
-      // This will get the updated content from the store
-      setEditedContent(posts.find(p => p.id === id)?.processedContent || {});
-    }, 500);
+      // Get the updated content from the store
+      const updatedPost = posts.find(p => p.id === id);
+      if (updatedPost) {
+        setEditedContent(updatedPost.processedContent);
+        
+        // Show success toast
+        addToast({
+          title: "Content regenerated",
+          description: `Your ${platform === "linkedin" ? "LinkedIn" : "Twitter"} post has been recreated.`,
+          type: "success",
+        });
+      }
+    }, 1000);
   };
 
   const handleContentChange = (platform: "linkedin" | "twitter", content: string) => {

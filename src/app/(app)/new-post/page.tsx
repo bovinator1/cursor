@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { Mic, Loader2 } from "lucide-react";
 import { processContent } from "@/mocks/aiProcessing";
 import useStore from "@/store/useStore";
+import { useToast } from "@/components/ui/toast";
 
 export default function NewPostPage() {
   const router = useRouter();
+  const { addToast } = useToast();
   const createPost = useStore((state) => state.createPost);
   const processPostWithAI = useStore((state) => state.processPostWithAI);
   
@@ -25,6 +27,13 @@ export default function NewPostPage() {
     setIsProcessing(true);
     setStep("processing");
     
+    // Show info toast
+    addToast({
+      title: "Processing started",
+      description: "Your content is being processed by our AI. This should take just a moment.",
+      type: "info",
+    });
+    
     // In a real app, this would call the AI service
     // For the prototype, we'll use a timeout to simulate processing
     setTimeout(() => {
@@ -38,9 +47,25 @@ export default function NewPostPage() {
       processPostWithAI(newPostId, "linkedin", "professional");
       processPostWithAI(newPostId, "twitter", "professional");
       
+      // Show success toast
+      addToast({
+        title: "Processing complete",
+        description: "Your content has been transformed. You can now edit and publish it.",
+        type: "success",
+      });
+      
       // Move to edit page for the new post
       router.push(`/edit/${newPostId}`);
     }, 2000);
+  };
+
+  const handleVoiceInput = () => {
+    // This would be implemented with the Web Speech API in a real app
+    addToast({
+      title: "Voice input not available",
+      description: "Voice input is not available in the prototype. Please type your content.",
+      type: "warning",
+    });
   };
 
   return (
@@ -74,6 +99,7 @@ export default function NewPostPage() {
                 />
                 <button
                   type="button"
+                  onClick={handleVoiceInput}
                   className="absolute right-3 bottom-3 p-2 text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors rounded-full bg-neutral-100 dark:bg-neutral-800"
                   aria-label="Voice input"
                 >
