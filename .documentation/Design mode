@@ -1,0 +1,3 @@
+Design mode
+
+We're working in prototype mode now. lets not do any connections to a database. let's mock up all our data with Jason and it's important that we setup the correct routes, component structure. as the base for our application. 
