@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
   Pen, 
@@ -14,10 +14,13 @@ import {
   X, 
   User
 } from "lucide-react";
-import { currentUser } from "@/mocks/users";
+import { useClerk, useUser } from "@clerk/nextjs";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Close mobile menu when route changes
@@ -37,6 +40,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       document.body.style.overflow = 'auto';
     };
   }, [isMobileMenuOpen]);
+
+  const handleSignOut = async () => {
+    await signOut(() => router.push("/"));
+  };
 
   return (
     <div className="flex min-h-screen">
@@ -76,13 +83,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </NavItem>
         </div>
         <div className="absolute bottom-4 left-4 right-4">
-          <NavItem
-            href="/logout"
-            icon={<LogOut className="w-5 h-5 mr-3" />}
-            isActive={false}
+          <button
+            onClick={handleSignOut}
+            className="flex items-center px-3 py-2 rounded-md w-full text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white"
           >
-            Logout
-          </NavItem>
+            <LogOut className="w-5 h-5 mr-3" />
+            <span>Logout</span>
+          </button>
         </div>
       </nav>
 
@@ -110,21 +117,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         
         <div className="px-4 py-2 border-b border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center space-x-3 py-3">
-            {currentUser.profileImage ? (
-              <img 
-                src={currentUser.profileImage} 
-                alt={currentUser.name}
-                className="w-10 h-10 rounded-full object-cover"
-              />
+            {isLoaded && user ? (
+              <>
+                {user.hasImage ? (
+                  <img 
+                    src={user.imageUrl} 
+                    alt={user.firstName || "User"}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center">
+                    <User className="w-5 h-5 text-neutral-500 dark:text-neutral-400" />
+                  </div>
+                )}
+                <div>
+                  <p className="font-medium">{user.firstName} {user.lastName}</p>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">{user.primaryEmailAddress?.emailAddress}</p>
+                </div>
+              </>
             ) : (
-              <div className="w-10 h-10 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center">
-                <User className="w-5 h-5 text-neutral-500 dark:text-neutral-400" />
+              <div className="animate-pulse">
+                <div className="w-10 h-10 rounded-full bg-neutral-200 dark:bg-neutral-800"></div>
               </div>
             )}
-            <div>
-              <p className="font-medium">{currentUser.name}</p>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">{currentUser.email}</p>
-            </div>
           </div>
         </div>
         
@@ -160,13 +175,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
         
         <div className="absolute bottom-4 left-4 right-4">
-          <MobileNavItem
-            href="/logout"
-            icon={<LogOut className="w-5 h-5 mr-3" />}
-            isActive={false}
+          <button
+            onClick={handleSignOut}
+            className="flex items-center px-3 py-3 rounded-md w-full text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white"
           >
-            Logout
-          </MobileNavItem>
+            <LogOut className="w-5 h-5 mr-3" />
+            <span>Logout</span>
+          </button>
         </div>
       </div>
 
@@ -187,19 +202,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-3">
-              <div className="text-sm text-neutral-500 dark:text-neutral-400 hidden sm:block">
-                {currentUser.name}
-              </div>
-              {currentUser.profileImage ? (
-                <img 
-                  src={currentUser.profileImage} 
-                  alt={currentUser.name}
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center">
-                  <User className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+              {isLoaded && user && (
+                <div className="text-sm text-neutral-500 dark:text-neutral-400 hidden sm:block">
+                  {user.firstName} {user.lastName}
                 </div>
+              )}
+              {isLoaded && user ? (
+                user.hasImage ? (
+                  <img 
+                    src={user.imageUrl} 
+                    alt={user.firstName || "User"}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center">
+                    <User className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+                  </div>
+                )
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-800 animate-pulse"></div>
               )}
             </div>
             <ThemeToggle />
@@ -249,7 +270,7 @@ function MobileNavItem({ href, icon, isActive, children }: NavItemProps) {
       }`}
     >
       {icon}
-      <span className="font-medium">{children}</span>
+      <span>{children}</span>
     </Link>
   );
 } 
