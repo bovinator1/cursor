@@ -1,11 +1,15 @@
 "use client";
 
-import { SignIn } from "@clerk/nextjs";
+import { SignUp } from "@clerk/nextjs";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 
-export default function SignInPage() {
+export default function SignUpPage() {
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect_url") || "/dashboard";
+
   return (
-    <div className="flex flex-col items-center justify-center w-full">
+    <div className="flex min-h-screen items-center justify-center">
       <div className="mb-6">
         <Image 
           src="/logo.svg" 
@@ -15,7 +19,7 @@ export default function SignInPage() {
           className="dark:invert" 
         />
       </div>
-      <SignIn 
+      <SignUp 
         appearance={{
           elements: {
             rootBox: "mx-auto",
@@ -29,10 +33,10 @@ export default function SignInPage() {
             footerActionLink: "text-neutral-900 dark:text-neutral-100 hover:text-neutral-700 dark:hover:text-neutral-300"
           }
         }}
+        path="/sign-up"
         routing="path"
-        path="/sign-in"
-        signUpUrl="/sign-up"
-        redirectUrl="/dashboard"
+        signInUrl="/sign-in"
+        afterSignUpUrl="/dashboard"
       />
     </div>
   );

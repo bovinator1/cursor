@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  clerkId       String    @unique // External ID from Clerk
+  email         String    @unique
+  firstName     String?
+  lastName      String?
+  profileImage  String?
+  bio          String?   @db.Text
+  role         UserRole  @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  posts         Post[]
+  comments      Comment[]
+  likes         Like[]
+
+  @@index([email])
+  @@index([clerkId])
+}
+
+model Post {
+  id            String    @id @default(cuid())
+  title         String
+  content       String    @db.Text
+  rawContent    String    @db.Text
+  processedContent Json?
+  published     Boolean   @default(false)
+  slug          String    @unique
+  excerpt       String?   @db.Text
+  featuredImage String?
+  authorId      String
+  author        User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  publishedAt   DateTime?
+  platforms     Platform[]
+  status        PostStatus @default(DRAFT)
+  comments      Comment[]
+  likes         Like[]
+  tags          Tag[]
+  viewCount     Int       @default(0)
+
+  @@index([authorId])
+  @@index([slug])
+  @@index([status])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([postId])
+  @@index([authorId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, authorId])
+  @@index([postId])
+  @@index([authorId])
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  posts     Post[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+enum Platform {
+  LINKEDIN
+  TWITTER
+  FACEBOOK
+  INSTAGRAM
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  SCHEDULED
+  ARCHIVED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  EDITOR
+}

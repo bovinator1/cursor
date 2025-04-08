@@ -15,6 +15,8 @@ import {
   User
 } from "lucide-react";
 import { useClerk, useUser } from "@clerk/nextjs";
+import { NavItem } from './NavItem'
+import { MobileNavItem } from './MobileNavItem'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -61,9 +63,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             Dashboard
           </NavItem>
           <NavItem
-            href="/new-post"
+            href="/posts/new"
             icon={<Pen className="w-5 h-5 mr-3" />}
-            isActive={pathname === "/new-post"}
+            isActive={pathname === "/posts/new"}
           >
             New Post
           </NavItem>
@@ -152,9 +154,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             Dashboard
           </MobileNavItem>
           <MobileNavItem
-            href="/new-post"
+            href="/posts/new"
             icon={<Pen className="w-5 h-5 mr-3" />}
-            isActive={pathname === "/new-post"}
+            isActive={pathname === "/posts/new"}
           >
             New Post
           </MobileNavItem>
