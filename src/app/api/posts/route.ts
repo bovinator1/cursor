@@ -1,25 +1,47 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { auth, currentUser } from '@clerk/nextjs/server'
 import { PostService } from '@/services/post.service'
 import { UserService } from '@/services/user.service'
 import { NextRequest } from 'next/server'
 import { prisma } from "@/lib/db"
+import type { Prisma } from '@prisma/client'
 
 export async function POST(req: Request) {
   try {
     const session = await auth()
-    if (!session?.userId) {
-      return new NextResponse('Unauthorized', { status: 401 })
+    const user = await currentUser()
+    
+    if (!session?.userId || !user) {
+      console.log('[POST_CREATE] No session or userId')
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await req.json()
+    console.log('[POST_CREATE] Request body:', body)
+    
     const { title, content, rawContent, processedContent, platforms } = body
 
     // Get the database user id from clerk id
-    const dbUser = await UserService.getUserByClerkId(session.userId)
+    let dbUser = await UserService.getUserByClerkId(session.userId)
+    
+    // If user doesn't exist in our database, create them
     if (!dbUser) {
-      return new NextResponse('User not found', { status: 404 })
+      console.log('[POST_CREATE] Creating new user for clerkId:', session.userId)
+      const email = user.emailAddresses[0]?.emailAddress
+      
+      if (!email) {
+        return NextResponse.json({ message: 'User email not found' }, { status: 400 })
+      }
+
+      dbUser = await UserService.createUser(
+        session.userId,
+        email,
+        user.firstName || undefined,
+        user.lastName || undefined
+      )
     }
+
+    console.log('[POST_CREATE] Using user:', dbUser.id)
 
     // Create post as draft
     const post = await PostService.createPost(dbUser.id, {
@@ -30,11 +52,15 @@ export async function POST(req: Request) {
       platforms,
       status: 'DRAFT'
     })
+    console.log('[POST_CREATE] Post created:', post.id)
 
     return NextResponse.json(post)
   } catch (error) {
-    console.error('[POSTS]', error)
-    return new NextResponse('Internal error', { status: 500 })
+    console.error('[POST_CREATE] Error:', error)
+    return NextResponse.json(
+      { message: error instanceof Error ? error.message : 'Internal error' }, 
+      { status: 500 }
+    )
   }
 }
 
@@ -77,13 +103,12 @@ export async function GET(req: NextRequest) {
     const total = await prisma.post.count({ where })
 
     // Format the response to include only necessary user fields
-    const formattedPosts = posts.map(post => ({
+    const formattedPosts = posts.map((post: Prisma.PostGetPayload<{ include: { author: true } }>) => ({
       ...post,
       author: {
         id: post.author.id,
         firstName: post.author.firstName,
         lastName: post.author.lastName,
-        // Include other safe fields as needed
       }
     }))
 

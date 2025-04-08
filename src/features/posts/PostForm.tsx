@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Platform } from '@prisma/client'
+import type { Platform } from '.prisma/client'
 import { toast } from 'sonner'
 import { PostPreview } from './PostPreview'
 import { PlatformPreview } from './PlatformPreview'
@@ -121,18 +121,27 @@ export function PostForm({ postId }: PostFormProps) {
         })
       })
 
-      if (!response.ok) throw new Error('Failed to save draft')
+      let data
+      try {
+        data = await response.json()
+      } catch (e) {
+        throw new Error(`Failed to parse response: ${response.status} ${response.statusText}`)
+      }
       
-      const savedPost = await response.json()
+      if (!response.ok) {
+        throw new Error(data?.message || `Failed to save draft: ${response.status}`)
+      }
+      
       toast.success('Draft saved successfully')
       
       // Redirect to the edit page if this is a new post
-      if (!postId) {
-        router.push(`/posts/${savedPost.id}`)
+      if (!postId && data?.id) {
+        router.push(`/posts/${data.id}`)
       }
     } catch (error) {
-      toast.error('Error saving draft')
-      console.error(error)
+      const message = error instanceof Error ? error.message : 'Error saving draft'
+      toast.error(message)
+      console.error('Save draft error:', error)
     } finally {
       setLoading(false)
     }
