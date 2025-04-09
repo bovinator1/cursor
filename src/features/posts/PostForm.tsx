@@ -27,6 +27,10 @@ interface PostData {
   title: string
   content: string
   rawContent: string
+  processedContent?: {
+    html: string
+    markdown: string
+  }
   platforms: Platform[]
 }
 
@@ -42,6 +46,10 @@ export function PostForm({ postId }: PostFormProps) {
     title: '',
     content: '',
     rawContent: '',
+    processedContent: {
+      html: '',
+      markdown: ''
+    },
     platforms: []
   })
   const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
@@ -63,11 +71,24 @@ export function PostForm({ postId }: PostFormProps) {
         throw new Error(data.message || 'Failed to fetch post')
       }
 
+      // Use processedContent if available, fallback to content/rawContent
+      const processedContent = data.processedContent || {
+        html: data.content || '',
+        markdown: data.rawContent || ''
+      }
+
       setPostData({
         title: data.title || '',
-        content: data.content || '',
-        rawContent: data.rawContent || '',
+        content: processedContent.html || data.content || '',
+        rawContent: processedContent.markdown || data.rawContent || '',
+        processedContent,
         platforms: data.platforms || []
+      })
+
+      console.log('Loaded post data:', {
+        title: data.title,
+        contentLength: processedContent.html?.length,
+        hasFormatting: processedContent.html?.includes('<') || false
       })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error fetching post'
@@ -94,7 +115,18 @@ export function PostForm({ postId }: PostFormProps) {
           })
         })
 
+        const responseData = await response.json()
+
         if (!response.ok) throw new Error('Failed to auto-save')
+        
+        // Update state with the response data to ensure consistency
+        setPostData(prev => ({
+          ...prev,
+          content: responseData.content || prev.content,
+          rawContent: responseData.rawContent || prev.rawContent,
+          processedContent: responseData.processedContent || prev.processedContent
+        }))
+        
         setAutoSaveStatus('saved')
       } catch (error) {
         console.error('Auto-save error:', error)
@@ -114,6 +146,18 @@ export function PostForm({ postId }: PostFormProps) {
     return () => clearTimeout(timer)
   }, [postData, postId, debouncedSave])
 
+  const handleEditorChange = (content: { html: string; markdown: string }) => {
+    setPostData(prev => ({
+      ...prev,
+      content: content.html,
+      rawContent: content.markdown,
+      processedContent: {
+        html: content.html,
+        markdown: content.markdown
+      }
+    }))
+  }
+
   const saveDraft = async () => {
     if (!postData.platforms.length) {
       toast.error('Please select at least one platform')
@@ -125,18 +169,30 @@ export function PostForm({ postId }: PostFormProps) {
       const url = postId ? `/api/posts/${postId}` : '/api/posts'
       const method = postId ? 'PATCH' : 'POST'
 
+      // Ensure we're sending both HTML and Markdown content
+      const payload = {
+        ...postData,
+        status: 'DRAFT',
+        content: postData.content || '',
+        rawContent: postData.rawContent || '',
+        processedContent: {
+          html: postData.content || '',
+          markdown: postData.rawContent || ''
+        }
+      }
+
+      console.log('Saving draft with payload:', payload)
+
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...postData,
-          status: 'DRAFT'
-        })
+        body: JSON.stringify(payload)
       })
 
       let data
       try {
         data = await response.json()
+        console.log('Save response:', data)
       } catch (e) {
         throw new Error(`Failed to parse response: ${response.status} ${response.statusText}`)
       }
@@ -147,10 +203,9 @@ export function PostForm({ postId }: PostFormProps) {
       
       toast.success('Draft saved successfully')
       
-      // Redirect to the edit page if this is a new post
-      if (!postId && data?.id) {
-        router.push(`/posts/${data.id}`)
-      }
+      // Always redirect to dashboard after saving
+      router.push('/dashboard')
+      router.refresh()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error saving draft'
       toast.error(message)
@@ -206,14 +261,6 @@ export function PostForm({ postId }: PostFormProps) {
       ...prev,
       [name]: value,
       ...(name === 'content' && { rawContent: value })
-    }))
-  }
-
-  const handleEditorChange = (content: { html: string; markdown: string }) => {
-    setPostData(prev => ({
-      ...prev,
-      content: content.html,
-      rawContent: content.markdown
     }))
   }
 
@@ -322,6 +369,7 @@ export function PostForm({ postId }: PostFormProps) {
               
               <div className="space-y-2">
                 <RichTextEditor
+                  key={postId}
                   content={postData.content}
                   onChange={handleEditorChange}
                   placeholder="Write your post content... (Markdown supported)"

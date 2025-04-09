@@ -39,7 +39,7 @@ export async function GET(
     const post = await prisma.post.findUnique({
       where: {
         id: postId,
-        authorId: dbUser.id // Use database user ID instead of Clerk ID
+        authorId: dbUser.id
       }
     })
 
@@ -60,7 +60,23 @@ export async function GET(
       }, { status: 404 })
     }
 
-    return NextResponse.json(post)
+    // Ensure we're returning all content fields
+    const response = {
+      ...post,
+      content: post.content || '',
+      rawContent: post.rawContent || '',
+      processedContent: post.processedContent || { html: post.content, markdown: post.rawContent }
+    }
+
+    console.log('Returning post data:', {
+      id: response.id,
+      title: response.title,
+      contentLength: response.content?.length,
+      rawContentLength: response.rawContent?.length,
+      hasProcessedContent: !!response.processedContent
+    })
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Error fetching post:', { 
       postId: await Promise.resolve(context.params).then(p => p.postId), 
@@ -140,13 +156,36 @@ export async function PATCH(
         title: data.title,
         content: data.content,
         rawContent: data.rawContent,
+        processedContent: data.processedContent || {
+          html: data.content,
+          markdown: data.rawContent
+        },
         status: data.status as PostStatus,
         platforms: data.platforms,
         ...(data.publishedAt && { publishedAt: data.publishedAt })
       }
     })
 
-    return NextResponse.json(post)
+    // Return the complete post data with all content fields
+    const response = {
+      ...post,
+      content: post.content || '',
+      rawContent: post.rawContent || '',
+      processedContent: post.processedContent || { 
+        html: post.content, 
+        markdown: post.rawContent 
+      }
+    }
+
+    console.log('Updated post data:', {
+      id: response.id,
+      title: response.title,
+      contentLength: response.content?.length,
+      rawContentLength: response.rawContent?.length,
+      hasProcessedContent: !!response.processedContent
+    })
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Error updating post:', { 
       postId: await Promise.resolve(context.params).then(p => p.postId), 

@@ -8,7 +8,7 @@ import Link from '@tiptap/extension-link'
 import CharacterCount from '@tiptap/extension-character-count'
 import Strike from '@tiptap/extension-strike'
 import TurndownService from 'turndown'
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { 
   Bold, 
@@ -215,43 +215,54 @@ export function RichTextEditor({ content, onChange, placeholder, maxLength }: Ri
     turndownServiceRef.current = new TurndownService(turndownConfig)
   }
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: {
-          levels: [1, 2]
-        }
-      }),
-      Placeholder.configure({
-        placeholder: placeholder || 'Write your post content... (Markdown supported)',
-      }),
-      TextAlign.configure({
-        types: ['heading', 'paragraph'],
-      }),
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-primary underline underline-offset-4 hover:text-primary/80',
+  const editor = useEditor(
+    {
+      extensions: [
+        StarterKit.configure({
+          heading: {
+            levels: [1, 2]
+          }
+        }),
+        Placeholder.configure({
+          placeholder: placeholder || 'Write your post content... (Markdown supported)',
+        }),
+        TextAlign.configure({
+          types: ['heading', 'paragraph'],
+        }),
+        Link.configure({
+          openOnClick: false,
+          HTMLAttributes: {
+            class: 'text-primary underline underline-offset-4 hover:text-primary/80',
+          },
+        }),
+        Strike,
+        CharacterCount.configure({
+          limit: maxLength,
+        }),
+      ],
+      content: content || '',
+      editorProps: {
+        attributes: {
+          class: 'prose prose-sm dark:prose-invert max-w-none min-h-[200px] focus:outline-none p-4',
         },
-      }),
-      Strike,
-      CharacterCount.configure({
-        limit: maxLength,
-      }),
-    ],
-    content,
-    editorProps: {
-      attributes: {
-        class: 'prose prose-sm dark:prose-invert max-w-none min-h-[200px] focus:outline-none p-4',
+      },
+      onUpdate: ({ editor }) => {
+        const html = editor.getHTML()
+        // Only convert to markdown if turndown service is available (client-side)
+        const markdown = turndownServiceRef.current ? turndownServiceRef.current.turndown(html) : html
+        onChange({ html, markdown })
       },
     },
-    onUpdate: ({ editor }) => {
-      const html = editor.getHTML()
-      // Only convert to markdown if turndown service is available (client-side)
-      const markdown = turndownServiceRef.current ? turndownServiceRef.current.turndown(html) : html
-      onChange({ html, markdown })
-    },
-  })
+    // Enable content updates when the content prop changes
+    [content]
+  )
+
+  // Update editor content when it changes externally
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content || '')
+    }
+  }, [editor, content])
 
   const characterCount = editor?.storage.characterCount.characters() ?? 0
   const isOverLimit = maxLength ? characterCount > maxLength : false
