@@ -16,6 +16,8 @@ import { Label } from "@/components/ui/label"
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Badge } from "@/components/ui/badge"
+import { Send, ArrowLeft } from 'lucide-react'
+import { RichTextEditor } from './RichTextEditor'
 
 interface PostFormProps {
   postId?: string
@@ -29,10 +31,13 @@ interface PostData {
 }
 
 const AUTO_SAVE_DELAY = 3000 // 3 seconds
+const TWITTER_CHAR_LIMIT = 280
+const LINKEDIN_CHAR_LIMIT = 3000
 
 export function PostForm({ postId }: PostFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [publishing, setPublishing] = useState(false)
   const [postData, setPostData] = useState<PostData>({
     title: '',
     content: '',
@@ -50,18 +55,26 @@ export function PostForm({ postId }: PostFormProps) {
 
   const fetchPost = async () => {
     try {
+      setLoading(true)
       const response = await fetch(`/api/posts/${postId}`)
-      if (!response.ok) throw new Error('Failed to fetch post')
       const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch post')
+      }
+
       setPostData({
-        title: data.title,
-        content: data.content,
-        rawContent: data.rawContent,
-        platforms: data.platforms
+        title: data.title || '',
+        content: data.content || '',
+        rawContent: data.rawContent || '',
+        platforms: data.platforms || []
       })
     } catch (error) {
-      toast.error('Error fetching post')
-      console.error(error)
+      const message = error instanceof Error ? error.message : 'Error fetching post'
+      toast.error(message)
+      console.error('Fetch error:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -147,14 +160,60 @@ export function PostForm({ postId }: PostFormProps) {
     }
   }
 
+  const publishPost = async () => {
+    if (!postId) return
+    if (!postData.platforms.length) {
+      toast.error('Please select at least one platform')
+      return
+    }
+
+    try {
+      setPublishing(true)
+      const response = await fetch(`/api/posts/${postId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...postData,
+          status: 'PUBLISHED',
+          publishedAt: new Date().toISOString()
+        })
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.message || `Failed to publish post: ${response.status}`)
+      }
+
+      toast.success('Post published successfully')
+      router.push('/dashboard')
+      router.refresh()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error publishing post'
+      toast.error(message)
+      console.error('Publish error:', error)
+    } finally {
+      setPublishing(false)
+    }
+  }
+
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { name: string; value: string }
   ) => {
-    const { name, value } = e.target
+    const name = 'target' in e ? e.target.name : e.name
+    const value = 'target' in e ? e.target.value : e.value
+
     setPostData(prev => ({
       ...prev,
       [name]: value,
-      ...(name === 'content' && { rawContent: value }) // Update rawContent when content changes
+      ...(name === 'content' && { rawContent: value })
+    }))
+  }
+
+  const handleEditorChange = (content: { html: string; markdown: string }) => {
+    setPostData(prev => ({
+      ...prev,
+      content: content.html,
+      rawContent: content.markdown
     }))
   }
 
@@ -169,6 +228,41 @@ export function PostForm({ postId }: PostFormProps) {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <Button
+          variant="ghost"
+          onClick={() => router.push('/dashboard')}
+          className="mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Dashboard
+        </Button>
+        <div className="space-x-2">
+          <Button
+            onClick={saveDraft}
+            disabled={loading || publishing}
+          >
+            {loading ? 'Saving...' : 'Save Draft'}
+          </Button>
+          {postId && (
+            <Button
+              onClick={publishPost}
+              disabled={loading || publishing}
+              variant="default"
+            >
+              {publishing ? (
+                'Publishing...'
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Publish
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+      </div>
+
       <Card className="p-6">
         <div className="flex justify-between items-center mb-6">
           <div className="space-y-4">
@@ -216,7 +310,7 @@ export function PostForm({ postId }: PostFormProps) {
           </TabsList>
           
           <TabsContent value="edit">
-            <form className="space-y-6">
+            <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
               <div className="space-y-2">
                 <Input
                   name="title"
@@ -227,12 +321,13 @@ export function PostForm({ postId }: PostFormProps) {
               </div>
               
               <div className="space-y-2">
-                <Textarea
-                  name="content"
+                <RichTextEditor
+                  content={postData.content}
+                  onChange={handleEditorChange}
                   placeholder="Write your post content... (Markdown supported)"
-                  value={postData.content}
-                  onChange={handleInputChange}
-                  rows={12}
+                  maxLength={postData.platforms.includes('TWITTER') ? TWITTER_CHAR_LIMIT : 
+                           postData.platforms.includes('LINKEDIN') ? LINKEDIN_CHAR_LIMIT : 
+                           undefined}
                 />
               </div>
             </form>
@@ -241,11 +336,7 @@ export function PostForm({ postId }: PostFormProps) {
           <TabsContent value="preview">
             <PostPreview
               title={postData.title}
-              content={
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {postData.content}
-                </ReactMarkdown>
-              }
+              content={postData.content}
             />
           </TabsContent>
 
@@ -254,29 +345,11 @@ export function PostForm({ postId }: PostFormProps) {
               <PlatformPreview
                 platform={platform}
                 title={postData.title}
-                content={postData.content}
+                content={postData.rawContent}
               />
             </TabsContent>
           ))}
         </Tabs>
-
-        <div className="flex items-center gap-4 mt-6">
-          <Button
-            type="button"
-            onClick={saveDraft}
-            disabled={loading}
-          >
-            {loading ? 'Saving...' : 'Save Draft'}
-          </Button>
-          
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.back()}
-          >
-            Cancel
-          </Button>
-        </div>
       </Card>
     </div>
   )

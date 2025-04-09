@@ -67,6 +67,39 @@ export default function DashboardPage() {
     }
   }
 
+  const handlePublishPost = async (postId: string) => {
+    try {
+      const response = await fetch(`/api/posts/${postId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: PostStatus.PUBLISHED,
+          publishedAt: new Date().toISOString(),
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to publish post')
+      }
+      
+      // Update the post status in our local state
+      setPosts(posts.map(post => 
+        post.id === postId 
+          ? { ...post, status: PostStatus.PUBLISHED, publishedAt: new Date() }
+          : post
+      ))
+      
+      toast.success("Post published successfully!")
+    } catch (error) {
+      console.error('Error publishing post:', error)
+      toast.error(error instanceof Error ? error.message : "Failed to publish post. Please try again.")
+    }
+  }
+
   if (!isLoaded || isLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -105,10 +138,17 @@ export default function DashboardPage() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="drafts">
-          <PostsList posts={draftPosts} onDelete={handleDeletePost} />
+          <PostsList 
+            posts={draftPosts} 
+            onDelete={handleDeletePost}
+            onPublish={handlePublishPost}
+          />
         </TabsContent>
         <TabsContent value="published">
-          <PostsList posts={publishedPosts} onDelete={handleDeletePost} />
+          <PostsList 
+            posts={publishedPosts} 
+            onDelete={handleDeletePost}
+          />
         </TabsContent>
       </Tabs>
     </div>

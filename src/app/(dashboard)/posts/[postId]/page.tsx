@@ -2,19 +2,15 @@ import { PostForm } from "@/features/posts/PostForm"
 import { Suspense } from "react"
 
 interface EditPostPageProps {
-  params: {
-    postId: string
-  }
+  params: Promise<{ postId: string }> | { postId: string }
 }
 
 export default async function EditPostPage({ params }: EditPostPageProps) {
-  const postId = await Promise.resolve(params.postId)
+  const { postId } = await Promise.resolve(params)
   
   return (
     <div className="container max-w-4xl py-6">
-      <Suspense fallback={<div>Loading...</div>}>
-        <PostForm postId={postId} />
-      </Suspense>
+      <PostForm postId={postId} />
     </div>
   )
 } 

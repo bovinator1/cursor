@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { Post, PostStatus } from '@prisma/client'
 import { formatDistanceToNow } from 'date-fns'
-import { Edit, Trash, Loader2 } from 'lucide-react'
+import { Edit, Trash, Loader2, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +22,7 @@ import {
 interface PostsListProps {
   posts: Post[]
   onDelete?: (postId: string) => Promise<void>
+  onPublish?: (postId: string) => Promise<void>
 }
 
 const getStatusVariant = (status: PostStatus): "default" | "secondary" | "destructive" | "outline" => {
@@ -39,15 +40,23 @@ const getStatusVariant = (status: PostStatus): "default" | "secondary" | "destru
   }
 }
 
-export function PostsList({ posts, onDelete }: PostsListProps) {
+export function PostsList({ posts, onDelete, onPublish }: PostsListProps) {
   const router = useRouter()
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [publishingId, setPublishingId] = useState<string | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showPublishDialog, setShowPublishDialog] = useState(false)
   const [postToDelete, setPostToDelete] = useState<Post | null>(null)
+  const [postToPublish, setPostToPublish] = useState<Post | null>(null)
 
   const handleDeleteClick = (post: Post) => {
     setPostToDelete(post)
     setShowDeleteDialog(true)
+  }
+
+  const handlePublishClick = (post: Post) => {
+    setPostToPublish(post)
+    setShowPublishDialog(true)
   }
 
   const handleConfirmDelete = async () => {
@@ -58,6 +67,16 @@ export function PostsList({ posts, onDelete }: PostsListProps) {
     setDeletingId(null)
     setShowDeleteDialog(false)
     setPostToDelete(null)
+  }
+
+  const handleConfirmPublish = async () => {
+    if (!postToPublish || !onPublish) return
+
+    setPublishingId(postToPublish.id)
+    await onPublish(postToPublish.id)
+    setPublishingId(null)
+    setShowPublishDialog(false)
+    setPostToPublish(null)
   }
 
   if (posts.length === 0) {
@@ -95,6 +114,21 @@ export function PostsList({ posts, onDelete }: PostsListProps) {
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
               </Button>
+              {post.status === PostStatus.DRAFT && onPublish && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => handlePublishClick(post)}
+                  disabled={publishingId === post.id}
+                >
+                  {publishingId === post.id ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  {publishingId === post.id ? 'Publishing...' : 'Publish'}
+                </Button>
+              )}
               {onDelete && (
                 <Button
                   variant="destructive"
@@ -131,6 +165,27 @@ export function PostsList({ posts, onDelete }: PostsListProps) {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showPublishDialog} onOpenChange={setShowPublishDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Publish Post</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you ready to publish "{postToPublish?.title || 'Untitled Post'}"?
+              This will make it visible to your audience.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmPublish}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Publish
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
