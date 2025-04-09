@@ -5,9 +5,10 @@ import { UserService } from '@/services/user.service'
 
 export async function GET(
   req: Request,
-  { params }: { params: { postId: string } }
+  context: { params: { postId: string } }
 ) {
   try {
+    const postId = await Promise.resolve(context.params.postId)
     const session = await auth()
     if (!session?.userId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
@@ -20,7 +21,7 @@ export async function GET(
     }
 
     // Get post
-    const post = await PostService.getPostById(params.postId)
+    const post = await PostService.getPostById(postId)
     if (!post) {
       return NextResponse.json({ message: 'Post not found' }, { status: 404 })
     }
@@ -39,9 +40,10 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { postId: string } }
+  context: { params: { postId: string } }
 ) {
   try {
+    const postId = await Promise.resolve(context.params.postId)
     const session = await auth()
     if (!session?.userId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
@@ -57,7 +59,7 @@ export async function PATCH(
     }
 
     // Verify post exists and belongs to user
-    const existingPost = await PostService.getPostById(params.postId)
+    const existingPost = await PostService.getPostById(postId)
     if (!existingPost) {
       return NextResponse.json({ message: 'Post not found' }, { status: 404 })
     }
@@ -66,7 +68,7 @@ export async function PATCH(
     }
 
     // Update post
-    const post = await PostService.updatePost(params.postId, {
+    const post = await PostService.updatePost(postId, {
       title,
       content,
       rawContent,
@@ -84,9 +86,10 @@ export async function PATCH(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { postId: string } }
+  context: { params: { postId: string } }
 ) {
   try {
+    const postId = await Promise.resolve(context.params.postId)
     const session = await auth()
     if (!session?.userId) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
@@ -99,7 +102,7 @@ export async function DELETE(
     }
 
     // Verify post exists and belongs to user
-    const existingPost = await PostService.getPostById(params.postId)
+    const existingPost = await PostService.getPostById(postId)
     if (!existingPost) {
       return NextResponse.json({ message: 'Post not found' }, { status: 404 })
     }
@@ -107,7 +110,7 @@ export async function DELETE(
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    await PostService.deletePost(params.postId)
+    await PostService.deletePost(postId)
 
     return NextResponse.json(null, { status: 204 })
   } catch (error) {
