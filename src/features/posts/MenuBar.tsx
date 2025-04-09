@@ -21,6 +21,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Separator } from '@/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Editor } from '@tiptap/react'
 
 interface MenuButtonProps {
   onClick: () => void
@@ -63,7 +64,7 @@ const MenuButton = ({ onClick, icon, label, isActive, disabled, shortcut }: Menu
   </Tooltip>
 )
 
-export const MenuBar = ({ editor }: { editor: any }) => {
+export const MenuBar = ({ editor }: { editor: Editor | null }) => {
   if (!editor) return null
 
   return (

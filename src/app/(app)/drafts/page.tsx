@@ -5,19 +5,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, Edit, Trash2 } from "lucide-react";
 import useStore from "@/store/useStore";
+import type { Post } from "@/types/post";
 
 export default function DraftsPage() {
   const router = useRouter();
   const posts = useStore((state) => state.posts);
   const deletePost = useStore((state) => state.deletePost);
   
-  const [drafts, setDrafts] = useState<any[]>([]);
+  const [drafts, setDrafts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Simulate fetching data
     setTimeout(() => {
-      setDrafts(posts.filter(post => post.status === "draft"));
+      setDrafts(posts.filter(post => post.status === "DRAFT"));
       setIsLoading(false);
     }, 500);
   }, [posts]);
@@ -59,7 +60,7 @@ export default function DraftsPage() {
       {drafts.length === 0 ? (
         <div className="bg-white dark:bg-neutral-950 rounded-lg border border-neutral-200 dark:border-neutral-800 p-8 text-center">
           <p className="text-neutral-600 dark:text-neutral-400 mb-4">
-            You don't have any drafts yet.
+            You don&apos;t have any drafts yet.
           </p>
           <Link
             href="/new-post"
@@ -80,7 +81,7 @@ export default function DraftsPage() {
                   <div className="text-sm text-neutral-500 dark:text-neutral-400 mb-1">
                     Last edited: {new Date(draft.updatedAt).toLocaleDateString()}
                   </div>
-                  <h3 className="font-medium mb-2">{draft.rawContent}</h3>
+                  <h3 className="font-medium mb-2">{draft.title || draft.rawContent}</h3>
                 </div>
                 <div className="flex space-x-2">
                   <button

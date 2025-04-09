@@ -50,7 +50,7 @@ export default function EditPostPage({ params }: { params: { id: string } }) {
         <div className="bg-white dark:bg-neutral-950 rounded-lg border border-neutral-200 dark:border-neutral-800 p-8 text-center">
           <h1 className="text-2xl font-bold mb-4">Post Not Found</h1>
           <p className="text-neutral-600 dark:text-neutral-400 mb-6">
-            The post you're looking for doesn't exist or has been deleted.
+            The post you&apos;re looking for doesn&apos;t exist or has been deleted.
           </p>
           <button
             onClick={() => router.push("/dashboard")}

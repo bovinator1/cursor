@@ -1,4 +1,4 @@
-import { userService } from "@/services/userService";
+import { userService } from '@/services/userService'
 import type { User } from "@prisma/client";
 
 /**

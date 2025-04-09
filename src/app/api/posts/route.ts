@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { PostService } from '@/services/post.service'
-import { UserService } from '@/services/user.service'
+import { userService } from '@/services/userService'
 import { NextRequest } from 'next/server'
 import { prisma } from "@/lib/db"
 import type { Prisma } from '@prisma/client'
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     const { title, content, rawContent, processedContent, platforms } = body
 
     // Get the database user id from clerk id
-    let dbUser = await UserService.getUserByClerkId(session.userId)
+    let dbUser = await userService.getUserByClerkId(session.userId)
     
     // If user doesn't exist in our database, create them
     if (!dbUser) {
@@ -33,12 +33,12 @@ export async function POST(req: Request) {
         return NextResponse.json({ message: 'User email not found' }, { status: 400 })
       }
 
-      dbUser = await UserService.createUser(
-        session.userId,
+      dbUser = await userService.createUser({
+        clerkId: session.userId,
         email,
-        user.firstName || undefined,
-        user.lastName || undefined
-      )
+        firstName: user.firstName || undefined,
+        lastName: user.lastName || undefined
+      })
     }
 
     console.log('[POST_CREATE] Using user:', dbUser.id)

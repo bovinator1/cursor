@@ -1,195 +1,130 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { Post, PostStatus } from '@prisma/client'
-import { formatDistanceToNow } from 'date-fns'
-import { Edit, Trash, Loader2, Send } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { useState } from 'react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { useRouter } from 'next/navigation'
+import { Edit, Trash2, Send } from 'lucide-react'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import type { Post } from '@/types/post'
 
 interface PostsListProps {
   posts: Post[]
-  onDelete?: (postId: string) => Promise<void>
-  onPublish?: (postId: string) => Promise<void>
+  status: 'DRAFT' | 'PUBLISHED'
+  onDelete?: (id: string) => void
+  onPublish?: (id: string) => void
 }
 
-const getStatusVariant = (status: PostStatus): "default" | "secondary" | "destructive" | "outline" => {
-  switch (status) {
-    case PostStatus.DRAFT:
-      return 'secondary'
-    case PostStatus.PUBLISHED:
-      return 'default'
-    case PostStatus.SCHEDULED:
-      return 'outline'
-    case PostStatus.ARCHIVED:
-      return 'destructive'
-    default:
-      return 'default'
-  }
-}
-
-export function PostsList({ posts, onDelete, onPublish }: PostsListProps) {
+export function PostsList({ posts, status, onDelete, onPublish }: PostsListProps) {
   const router = useRouter()
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [publishingId, setPublishingId] = useState<string | null>(null)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [showPublishDialog, setShowPublishDialog] = useState(false)
-  const [postToDelete, setPostToDelete] = useState<Post | null>(null)
-  const [postToPublish, setPostToPublish] = useState<Post | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
 
-  const handleDeleteClick = (post: Post) => {
-    setPostToDelete(post)
-    setShowDeleteDialog(true)
+  const handleDeleteClick = (id: string) => {
+    setSelectedPostId(id)
+    setDeleteDialogOpen(true)
   }
 
-  const handlePublishClick = (post: Post) => {
-    setPostToPublish(post)
-    setShowPublishDialog(true)
+  const handleDeleteConfirm = () => {
+    if (selectedPostId && onDelete) {
+      onDelete(selectedPostId)
+      setDeleteDialogOpen(false)
+      setSelectedPostId(null)
+    }
   }
 
-  const handleConfirmDelete = async () => {
-    if (!postToDelete || !onDelete) return
-
-    setDeletingId(postToDelete.id)
-    await onDelete(postToDelete.id)
-    setDeletingId(null)
-    setShowDeleteDialog(false)
-    setPostToDelete(null)
-  }
-
-  const handleConfirmPublish = async () => {
-    if (!postToPublish || !onPublish) return
-
-    setPublishingId(postToPublish.id)
-    await onPublish(postToPublish.id)
-    setPublishingId(null)
-    setShowPublishDialog(false)
-    setPostToPublish(null)
+  const handlePublish = async (id: string) => {
+    if (onPublish) {
+      onPublish(id)
+    }
   }
 
   if (posts.length === 0) {
     return (
-      <div className="text-center p-6">
-        <p className="text-neutral-600 dark:text-neutral-400">No posts found.</p>
+      <div className="text-center p-8">
+        <p className="text-muted-foreground">
+          You don&apos;t have any {status.toLowerCase()} posts yet.
+        </p>
       </div>
     )
   }
 
   return (
-    <>
-      <div className="grid grid-cols-1 gap-4">
-        {posts.map((post) => (
-          <Card key={post.id} className="relative">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="truncate">{post.title || 'Untitled Post'}</span>
-                <Badge variant={getStatusVariant(post.status)}>
-                  {post.status.toLowerCase()}
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                Last modified {formatDistanceToNow(new Date(post.updatedAt))} ago
-              </p>
-            </CardContent>
-            <CardFooter className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push(`/posts/${post.id}`)}
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-              {post.status === PostStatus.DRAFT && onPublish && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => handlePublishClick(post)}
-                  disabled={publishingId === post.id}
-                >
-                  {publishingId === post.id ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+    <div className="space-y-4">
+      {posts.map((post) => (
+        <Card key={post.id}>
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">
+                  {status === "DRAFT" ? (
+                    <>Last edited: {new Date(post.updatedAt).toLocaleDateString()}</>
                   ) : (
-                    <Send className="h-4 w-4 mr-2" />
+                    <>Published: {new Date(post.publishedAt || post.updatedAt).toLocaleDateString()}</>
                   )}
-                  {publishingId === post.id ? 'Publishing...' : 'Publish'}
-                </Button>
-              )}
-              {onDelete && (
+                </div>
+                <h3 className="font-medium mb-2">{post.title || "Untitled Post"}</h3>
+                <div className="flex flex-wrap gap-2">
+                  {post.platforms.map((platform) => (
+                    <Badge key={platform} variant="secondary">
+                      {platform}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div className="flex space-x-2">
                 <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => handleDeleteClick(post)}
-                  disabled={deletingId === post.id}
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => router.push(`/posts/${post.id}`)}
                 >
-                  {deletingId === post.id ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Trash className="h-4 w-4 mr-2" />
-                  )}
-                  {deletingId === post.id ? 'Deleting...' : 'Delete'}
+                  <Edit className="h-4 w-4" />
+                  <span className="sr-only">Edit post</span>
                 </Button>
-              )}
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+                {status === "DRAFT" && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handlePublish(post.id)}
+                  >
+                    <Send className="h-4 w-4" />
+                    <span className="sr-only">Publish post</span>
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDeleteClick(post.id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="sr-only">Delete post</span>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete "{postToDelete?.title || 'Untitled Post'}".
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you sure you want to delete this post?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. The post will be permanently deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
               Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showPublishDialog} onOpenChange={setShowPublishDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Publish Post</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you ready to publish "{postToPublish?.title || 'Untitled Post'}"?
-              This will make it visible to your audience.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmPublish}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              Publish
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 } 

@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { currentUser, User } from '@/mocks/users';
-import { mockPosts, Post } from '@/mocks/posts';
+import { mockPosts } from '@/mocks/posts';
 import { processContent } from '@/mocks/aiProcessing';
+import type { Post, Platform } from '@/types/post';
 
 interface StoreState {
   // User state
@@ -18,10 +19,10 @@ interface StoreState {
   // Actions
   login: (userId: string) => void;
   logout: () => void;
-  createPost: (rawContent: string) => void;
+  createPost: (data: Partial<Post>) => void;
   updatePost: (postId: string, updates: Partial<Post>) => void;
   deletePost: (postId: string) => void;
-  publishPost: (postId: string, platforms: ('linkedin' | 'twitter')[]) => void;
+  publishPost: (postId: string, platforms: Platform[]) => void;
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   processPostWithAI: (postId: string, platform: 'linkedin' | 'twitter', tone: 'professional' | 'casual' | 'witty') => void;
 }
@@ -31,7 +32,7 @@ const useStore = create<StoreState>()((set) => ({
   user: currentUser,
   isAuthenticated: true, // For prototyping, we'll assume the user is authenticated
   posts: mockPosts,
-  drafts: mockPosts.filter(post => post.status === 'draft'),
+  drafts: mockPosts.filter(post => post.status === 'DRAFT'),
   currentTheme: currentUser?.settings.theme || 'system',
   
   // Actions
@@ -44,57 +45,65 @@ const useStore = create<StoreState>()((set) => ({
   
   logout: () => set({ user: null, isAuthenticated: false }),
   
-  createPost: (rawContent: string) => set((state) => {
+  createPost: (data) => set((state) => {
     const newPost: Post = {
       id: String(Date.now()),
-      userId: state.user?.id || '1',
-      rawContent,
-      processedContent: {},
-      status: 'draft',
-      platforms: [],
+      title: data.title || '',
+      content: data.content || '',
+      rawContent: data.rawContent || '',
+      processedContent: data.processedContent || {
+        html: data.content || '',
+        markdown: data.rawContent || ''
+      },
+      platforms: data.platforms || [],
+      status: 'DRAFT',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      updatedAt: new Date().toISOString()
+    }
     
     return { 
       posts: [...state.posts, newPost],
       drafts: [...state.drafts, newPost],
-    };
+    }
   }),
   
-  updatePost: (postId: string, updates: Partial<Post>) => set((state) => {
+  updatePost: (postId, updates) => set((state) => {
     const updatedPosts = state.posts.map(post => 
-      post.id === postId ? { ...post, ...updates, updatedAt: new Date().toISOString() } : post
-    );
+      post.id === postId ? { 
+        ...post, 
+        ...updates, 
+        updatedAt: new Date().toISOString() 
+      } : post
+    )
     
     return { 
       posts: updatedPosts,
-      drafts: updatedPosts.filter(post => post.status === 'draft'),
-    };
+      drafts: updatedPosts.filter(post => post.status === 'DRAFT'),
+    }
   }),
   
-  deletePost: (postId: string) => set((state) => ({
+  deletePost: (postId) => set((state) => ({
     posts: state.posts.filter(post => post.id !== postId),
     drafts: state.drafts.filter(post => post.id !== postId),
   })),
   
-  publishPost: (postId: string, platforms: ('linkedin' | 'twitter')[]) => set((state) => {
+  publishPost: (postId, platforms) => set((state) => {
     const updatedPosts = state.posts.map(post => 
       post.id === postId 
         ? { 
             ...post, 
-            status: 'published' as const, 
-            platforms, 
+            status: 'PUBLISHED', 
+            platforms,
             updatedAt: new Date().toISOString(),
             publishedAt: new Date().toISOString(),
           } 
         : post
-    );
+    )
     
     return { 
       posts: updatedPosts,
-      drafts: updatedPosts.filter(post => post.status === 'draft'),
-    };
+      drafts: updatedPosts.filter(post => post.status === 'DRAFT'),
+    }
   }),
   
   setTheme: (theme: 'light' | 'dark' | 'system') => set((state) => ({
@@ -125,7 +134,7 @@ const useStore = create<StoreState>()((set) => ({
     
     return { 
       posts: updatedPosts,
-      drafts: updatedPosts.filter(p => p.status === 'draft'),
+      drafts: updatedPosts.filter(p => p.status === 'DRAFT'),
     };
   }),
 }));

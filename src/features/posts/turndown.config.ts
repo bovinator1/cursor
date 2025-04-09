@@ -14,13 +14,13 @@ export const getTurndownService = () => {
 
   // Custom rules for special cases
   turndownService.addRule('alignedParagraphs', {
-    filter: (node) => {
+    filter(node: HTMLElement) {
       return (
         node.nodeName === 'P' &&
         !!node.getAttribute('style')?.includes('text-align')
       )
     },
-    replacement: (content, node: any) => {
+    replacement(content: string, node: HTMLElement) {
       const alignment = node.getAttribute('style')?.match(/text-align:\s*(\w+)/)?.[1]
       if (!alignment || alignment === 'left') return content
       return `<div style="text-align: ${alignment}">${content}</div>\n\n`
@@ -29,14 +29,14 @@ export const getTurndownService = () => {
 
   // Handle code blocks with language specification
   turndownService.addRule('fencedCodeBlock', {
-    filter: (node) => {
+    filter(node: HTMLElement) {
       return (
         node.nodeName === 'PRE' &&
         node.firstChild?.nodeName === 'CODE'
       ) || false
     },
-    replacement: (content, node: any) => {
-      const language = node.firstChild.getAttribute('class')?.replace('language-', '') || ''
+    replacement(content: string, node: HTMLElement) {
+      const language = (node.firstChild as HTMLElement)?.getAttribute('class')?.replace('language-', '') || ''
       return `\n\`\`\`${language}\n${content}\n\`\`\`\n\n`
     }
   })

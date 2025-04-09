@@ -1,26 +1,25 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import type { Platform } from '.prisma/client'
+import { ArrowLeft, Send } from 'lucide-react'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { RichTextEditor } from './RichTextEditor'
 import { PostPreview } from './PostPreview'
 import { PlatformPreview } from './PlatformPreview'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import { Badge } from "@/components/ui/badge"
-import { Send, ArrowLeft } from 'lucide-react'
-import { RichTextEditor } from './RichTextEditor'
+import { Platform } from '@/types/post'
 
 interface PostFormProps {
   postId?: string
+  onSubmit?: (data: FormData) => Promise<void>
+  loading?: boolean
 }
 
 interface PostData {
@@ -38,9 +37,8 @@ const AUTO_SAVE_DELAY = 3000 // 3 seconds
 const TWITTER_CHAR_LIMIT = 280
 const LINKEDIN_CHAR_LIMIT = 3000
 
-export function PostForm({ postId }: PostFormProps) {
+export function PostForm({ postId, loading }: PostFormProps) {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [postData, setPostData] = useState<PostData>({
     title: '',
@@ -54,16 +52,8 @@ export function PostForm({ postId }: PostFormProps) {
   })
   const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
 
-  // Fetch existing post data if editing
-  useEffect(() => {
-    if (postId) {
-      fetchPost()
-    }
-  }, [postId])
-
-  const fetchPost = async () => {
+  const fetchPost = useCallback(async () => {
     try {
-      setLoading(true)
       const response = await fetch(`/api/posts/${postId}`)
       const data = await response.json()
       
@@ -94,10 +84,15 @@ export function PostForm({ postId }: PostFormProps) {
       const message = error instanceof Error ? error.message : 'Error fetching post'
       toast.error(message)
       console.error('Fetch error:', error)
-    } finally {
-      setLoading(false)
     }
-  }
+  }, [postId])
+
+  // Fetch existing post data if editing
+  useEffect(() => {
+    if (postId) {
+      fetchPost()
+    }
+  }, [postId, fetchPost])
 
   // Auto-save functionality
   const debouncedSave = useCallback(
@@ -165,7 +160,6 @@ export function PostForm({ postId }: PostFormProps) {
     }
 
     try {
-      setLoading(true)
       const url = postId ? `/api/posts/${postId}` : '/api/posts'
       const method = postId ? 'PATCH' : 'POST'
 
@@ -210,8 +204,6 @@ export function PostForm({ postId }: PostFormProps) {
       const message = error instanceof Error ? error.message : 'Error saving draft'
       toast.error(message)
       console.error('Save draft error:', error)
-    } finally {
-      setLoading(false)
     }
   }
 

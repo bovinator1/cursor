@@ -1,7 +1,8 @@
+import { auth } from '@clerk/nextjs/server'
+import { currentUser } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { auth, currentUser } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db'
-import { UserService } from '@/services/user.service'
+import { userService } from '@/services/userService'
 import type { PostStatus } from '@prisma/client'
 
 export async function GET(
@@ -14,27 +15,31 @@ export async function GET(
     const user = await currentUser()
     
     if (!session?.userId || !user) {
-      console.error('Unauthorized access attempt:', { postId })
+      console.log('[POST_GET] No session or userId')
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get or create database user
-    let dbUser = await UserService.getUserByClerkId(session.userId)
+    // Get the database user id from clerk id
+    let dbUser = await userService.getUserByClerkId(session.userId)
+    
+    // If user doesn't exist in our database, create them
     if (!dbUser) {
-      console.log('[GET] Creating new user for clerkId:', session.userId)
+      console.log('[POST_GET] Creating new user for clerkId:', session.userId)
       const email = user.emailAddresses[0]?.emailAddress
       
       if (!email) {
         return NextResponse.json({ message: 'User email not found' }, { status: 400 })
       }
 
-      dbUser = await UserService.createUser(
-        session.userId,
+      dbUser = await userService.createUser({
+        clerkId: session.userId,
         email,
-        user.firstName || undefined,
-        user.lastName || undefined
-      )
+        firstName: user.firstName || undefined,
+        lastName: user.lastName || undefined
+      })
     }
+
+    console.log('[POST_GET] Using user:', dbUser.id)
 
     const post = await prisma.post.findUnique({
       where: {
@@ -44,46 +49,17 @@ export async function GET(
     })
 
     if (!post) {
-      console.error('Post not found:', { 
-        postId, 
-        userId: session.userId,
-        dbUserId: dbUser.id,
-        requestUrl: request.url 
-      })
-      return NextResponse.json({ 
-        message: 'Post not found',
-        debug: {
-          postId,
-          clerkUserId: session.userId,
-          dbUserId: dbUser.id
-        }
-      }, { status: 404 })
+      return NextResponse.json({ message: 'Post not found' }, { status: 404 })
     }
 
-    // Ensure we're returning all content fields
-    const response = {
-      ...post,
-      content: post.content || '',
-      rawContent: post.rawContent || '',
-      processedContent: post.processedContent || { html: post.content, markdown: post.rawContent }
-    }
-
-    console.log('Returning post data:', {
-      id: response.id,
-      title: response.title,
-      contentLength: response.content?.length,
-      rawContentLength: response.rawContent?.length,
-      hasProcessedContent: !!response.processedContent
-    })
-
-    return NextResponse.json(response)
+    return NextResponse.json(post)
   } catch (error) {
-    console.error('Error fetching post:', { 
+    console.error('Error getting post:', { 
       postId: await Promise.resolve(context.params).then(p => p.postId), 
       error: error instanceof Error ? error.message : error 
     })
     return NextResponse.json(
-      { message: 'Error fetching post', error: error instanceof Error ? error.message : 'Unknown error' },
+      { message: 'Error getting post', error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
@@ -99,93 +75,43 @@ export async function PATCH(
     const user = await currentUser()
     
     if (!session?.userId || !user) {
-      console.error('Unauthorized update attempt:', { postId })
+      console.log('[POST_PATCH] No session or userId')
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get or create database user
-    let dbUser = await UserService.getUserByClerkId(session.userId)
+    // Get the database user id from clerk id
+    let dbUser = await userService.getUserByClerkId(session.userId)
+    
+    // If user doesn't exist in our database, create them
     if (!dbUser) {
-      console.log('[PATCH] Creating new user for clerkId:', session.userId)
+      console.log('[POST_PATCH] Creating new user for clerkId:', session.userId)
       const email = user.emailAddresses[0]?.emailAddress
       
       if (!email) {
         return NextResponse.json({ message: 'User email not found' }, { status: 400 })
       }
 
-      dbUser = await UserService.createUser(
-        session.userId,
+      dbUser = await userService.createUser({
+        clerkId: session.userId,
         email,
-        user.firstName || undefined,
-        user.lastName || undefined
-      )
-    }
-
-    const data = await request.json()
-    
-    // First check if the post exists and belongs to the user
-    const existingPost = await prisma.post.findUnique({
-      where: {
-        id: postId,
-        authorId: dbUser.id
-      }
-    })
-
-    if (!existingPost) {
-      console.error('Post not found for update:', { 
-        postId, 
-        userId: session.userId,
-        dbUserId: dbUser.id
+        firstName: user.firstName || undefined,
+        lastName: user.lastName || undefined
       })
-      return NextResponse.json({ 
-        message: 'Post not found',
-        debug: {
-          postId,
-          clerkUserId: session.userId,
-          dbUserId: dbUser.id
-        }
-      }, { status: 404 })
     }
+
+    console.log('[POST_PATCH] Using user:', dbUser.id)
+
+    const body = await request.json()
 
     const post = await prisma.post.update({
       where: {
         id: postId,
         authorId: dbUser.id
       },
-      data: {
-        title: data.title,
-        content: data.content,
-        rawContent: data.rawContent,
-        processedContent: data.processedContent || {
-          html: data.content,
-          markdown: data.rawContent
-        },
-        status: data.status as PostStatus,
-        platforms: data.platforms,
-        ...(data.publishedAt && { publishedAt: data.publishedAt })
-      }
+      data: body
     })
 
-    // Return the complete post data with all content fields
-    const response = {
-      ...post,
-      content: post.content || '',
-      rawContent: post.rawContent || '',
-      processedContent: post.processedContent || { 
-        html: post.content, 
-        markdown: post.rawContent 
-      }
-    }
-
-    console.log('Updated post data:', {
-      id: response.id,
-      title: response.title,
-      contentLength: response.content?.length,
-      rawContentLength: response.rawContent?.length,
-      hasProcessedContent: !!response.processedContent
-    })
-
-    return NextResponse.json(response)
+    return NextResponse.json(post)
   } catch (error) {
     console.error('Error updating post:', { 
       postId: await Promise.resolve(context.params).then(p => p.postId), 
@@ -208,53 +134,33 @@ export async function DELETE(
     const user = await currentUser()
     
     if (!session?.userId || !user) {
-      console.error('Unauthorized delete attempt:', { postId })
+      console.log('[POST_DELETE] No session or userId')
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get or create database user
-    let dbUser = await UserService.getUserByClerkId(session.userId)
+    // Get the database user id from clerk id
+    let dbUser = await userService.getUserByClerkId(session.userId)
+    
+    // If user doesn't exist in our database, create them
     if (!dbUser) {
-      console.log('[DELETE] Creating new user for clerkId:', session.userId)
+      console.log('[POST_DELETE] Creating new user for clerkId:', session.userId)
       const email = user.emailAddresses[0]?.emailAddress
       
       if (!email) {
         return NextResponse.json({ message: 'User email not found' }, { status: 400 })
       }
 
-      dbUser = await UserService.createUser(
-        session.userId,
+      dbUser = await userService.createUser({
+        clerkId: session.userId,
         email,
-        user.firstName || undefined,
-        user.lastName || undefined
-      )
-    }
-
-    // First check if the post exists and belongs to the user
-    const existingPost = await prisma.post.findUnique({
-      where: {
-        id: postId,
-        authorId: dbUser.id
-      }
-    })
-
-    if (!existingPost) {
-      console.error('Post not found for deletion:', { 
-        postId, 
-        userId: session.userId,
-        dbUserId: dbUser.id
+        firstName: user.firstName || undefined,
+        lastName: user.lastName || undefined
       })
-      return NextResponse.json({ 
-        message: 'Post not found',
-        debug: {
-          postId,
-          clerkUserId: session.userId,
-          dbUserId: dbUser.id
-        }
-      }, { status: 404 })
     }
 
-    const post = await prisma.post.delete({
+    console.log('[POST_DELETE] Using user:', dbUser.id)
+
+    await prisma.post.delete({
       where: {
         id: postId,
         authorId: dbUser.id

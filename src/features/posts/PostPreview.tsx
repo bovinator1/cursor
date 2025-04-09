@@ -1,23 +1,18 @@
 'use client'
 
-import { ReactNode } from 'react'
-import { Card } from "@/components/ui/card"
+import { cn } from '@/lib/utils'
 
 interface PostPreviewProps {
   title: string
   content: string
+  className?: string
 }
 
-export function PostPreview({ title, content }: PostPreviewProps) {
+export function PostPreview({ title, content, className }: PostPreviewProps) {
   return (
-    <Card className="p-6 bg-muted/50">
-      <div className="space-y-4">
-        <h2 className="text-2xl font-bold">{title}</h2>
-        <div 
-          className="prose prose-sm max-w-none dark:prose-invert"
-          dangerouslySetInnerHTML={{ __html: content }}
-        />
-      </div>
-    </Card>
+    <div className={cn('prose prose-sm dark:prose-invert max-w-none', className)}>
+      <h1>{title}</h1>
+      <div dangerouslySetInnerHTML={{ __html: content }} />
+    </div>
   )
 } 
