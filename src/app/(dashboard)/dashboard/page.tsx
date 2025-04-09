@@ -8,6 +8,7 @@ import { Post, PostStatus } from '@prisma/client'
 import { Button } from "@/components/ui/button"
 import { PostsList } from '@/features/posts/PostsList'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { toast } from "sonner"
 
 interface PostsResponse {
   posts: Post[];
@@ -35,6 +36,7 @@ export default function DashboardPage() {
       } catch (error) {
         console.error('Error fetching posts:', error)
         setPosts([])
+        toast.error("Failed to load posts. Please try again.")
       } finally {
         setIsLoading(false)
       }
@@ -50,10 +52,18 @@ export default function DashboardPage() {
       const response = await fetch(`/api/posts/${postId}`, {
         method: 'DELETE',
       })
-      if (!response.ok) throw new Error('Failed to delete post')
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete post')
+      }
+      
       setPosts(posts.filter(post => post.id !== postId))
+      toast.success(data.message || "Post deleted successfully.")
     } catch (error) {
       console.error('Error deleting post:', error)
+      toast.error(error instanceof Error ? error.message : "Failed to delete post. Please try again.")
     }
   }
 

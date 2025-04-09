@@ -112,9 +112,9 @@ export async function DELETE(
 
     await PostService.deletePost(postId)
 
-    return NextResponse.json(null, { status: 204 })
+    return NextResponse.json({ message: 'Post deleted successfully' }, { status: 200 })
   } catch (error) {
     console.error('[POST_DELETE]', error)
-    return NextResponse.json({ message: 'Internal error' }, { status: 500 })
+    return NextResponse.json({ message: 'Failed to delete post' }, { status: 500 })
   }
 } 
